@@ -86,12 +86,10 @@ class BaseModelSerializer(serializers.ModelSerializer):
         else:
             return super().to_internal_value(data)
 
-        request_method = getattr(self.context['view'].request, 'method', '')
-
         if all((
             isinstance(self.parent, BulkListSerializer),
             id_attr,
-            request_method in ('PUT', 'PATCH'),
+            getattr(self.context['view'].request, 'method', ''),
         )):
             id_field = self.fields[id_attr]
             id_value = id_field.get_value(data)
