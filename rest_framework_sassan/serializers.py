@@ -1,5 +1,7 @@
 import time
 
+from django.db.models.fields.reverse_related import ManyToManyRel
+from django.db.models.fields.related import ManyToManyField
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
@@ -141,7 +143,17 @@ class BaseModelSerializer(serializers.ModelSerializer):
                         v = v[source.partition('.')[0]]
                         ins = getattr(ins, source.partition('.')[0])
                         source = source.partition('.')[2]
-                    setattr(ins, field, v.pop(field))
+                    try:
+                        if isinstance(
+                            ins._meta.get_field(field),
+                            (ManyToManyField, ManyToManyRel),
+                        ):
+                            getattr(ins, field).set(v[field])
+                        else:
+                            setattr(ins, field, v[field])
+                    except:
+                        setattr(ins, field, v[field])
+                    v.pop(field)
                     ins.save()
                     for field, data in reversed(path):
                         if len(data[field]) == 0:
