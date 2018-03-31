@@ -5,7 +5,7 @@ import os
 from setuptools import find_packages, setup
 
 # Package meta-data.
-NAME = 'rest_framework_sassan'
+NAME = 'restframework_sassan'
 DESCRIPTION = 'Some helpers to use restframework'
 URL = 'https://bitbucket.org/sassanh/restframework-sassan'
 EMAIL = 'sassanh@gmail.com'
