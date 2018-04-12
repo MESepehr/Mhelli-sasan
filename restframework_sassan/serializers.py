@@ -123,7 +123,7 @@ class BaseModelSerializer(serializers.ModelSerializer):
                     data[field] = validated_data[field]
         instance = self.Meta.model.objects.create(**data)
         for field in many_to_many_fields:
-            setattr(instance, field, many_to_many_fields[field])
+            getattr(instance, field).set(many_to_many_fields[field])
         instance.save()
         return instance
 
