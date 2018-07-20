@@ -17,7 +17,10 @@ class UnixEpochDateField(serializers.DateTimeField):
             return None
 
     def to_internal_value(self, value):
-        return timezone.datetime.fromtimestamp(int(value), tz=timezone.utc)
+        return timezone.datetime.datetime.fromtimestamp(
+            int(value),
+            tz=timezone.utc,
+        )
 
 
 class DurationField(serializers.DateTimeField):
