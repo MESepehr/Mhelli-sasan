@@ -99,7 +99,7 @@ class BaseModelSerializer(serializers.ModelSerializer):
                 partial=True,
                 context=self.context,
             )
-            serializer.is_valid()
+            serializer.is_valid(raise_exception=True)
             return serializer.save()
         else:
             serializer = type(self)(
@@ -107,7 +107,7 @@ class BaseModelSerializer(serializers.ModelSerializer):
                 partial=False,
                 context=self.context,
             )
-            serializer.is_valid()
+            serializer.is_valid(raise_exception=True)
             return serializer.save()
 
         try:
