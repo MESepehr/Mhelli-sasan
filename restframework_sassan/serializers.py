@@ -1,6 +1,8 @@
 import time
 
-from django.db.models.fields.reverse_related import ManyToManyRel
+from django.db.models import Model
+from django.db.models.fields.related import (ManyToManyField, ManyToManyRel,
+                                             ManyToOneRel)
 from django.db.models.fields.related import ManyToManyField
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
@@ -17,10 +19,7 @@ class UnixEpochDateField(serializers.DateTimeField):
             return None
 
     def to_internal_value(self, value):
-        return timezone.datetime.datetime.fromtimestamp(
-            int(value),
-            tz=timezone.utc,
-        )
+        return timezone.datetime.fromtimestamp(int(value), tz=timezone.utc)
 
 
 class DurationField(serializers.DateTimeField):
@@ -68,7 +67,7 @@ class BaseModelSerializer(serializers.ModelSerializer):
         list_serializer_class = BulkListSerializer
 
     def __init__(self, *args, **kwargs):
-        super(BaseModelSerializer, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         fields = kwargs.pop('fields', None)
         if fields:
@@ -77,6 +76,12 @@ class BaseModelSerializer(serializers.ModelSerializer):
             existing = set(self.fields.keys())
             for field_name in existing - allowed:
                 self.fields.pop(field_name)
+
+    def run_validators(self, value):
+        to_validate = self._read_only_defaults()
+        if not isinstance(value, Model):
+            to_validate.update(value)
+        super().run_validators(to_validate)
 
     def to_internal_value(self, data):
         id_attr = getattr(self.Meta, 'update_lookup_field', 'id')
@@ -87,9 +92,23 @@ class BaseModelSerializer(serializers.ModelSerializer):
         ):
             ret = super().to_internal_value(data)
         elif id_attr in data:
-            return self.Meta.model.objects.get(**{id_attr: data[id_attr]})
+            instance = self.Meta.model.objects.get(**{id_attr: data[id_attr]})
+            serializer = type(self)(
+                instance,
+                data=data,
+                partial=True,
+                context=self.context,
+            )
+            serializer.is_valid()
+            return serializer.save()
         else:
-            return super().to_internal_value(data)
+            serializer = type(self)(
+                data=data,
+                partial=False,
+                context=self.context,
+            )
+            serializer.is_valid()
+            return serializer.save()
 
         try:
             request_method = getattr(
@@ -97,7 +116,7 @@ class BaseModelSerializer(serializers.ModelSerializer):
                 'method',
                 '',
             )
-        except:
+        except BaseException:
             request_method = None
 
         if all((
@@ -146,15 +165,12 @@ class BaseModelSerializer(serializers.ModelSerializer):
                         v = v[source.partition('.')[0]]
                         ins = getattr(ins, source.partition('.')[0])
                         source = source.partition('.')[2]
-                    try:
-                        if isinstance(
-                            ins._meta.get_field(field),
-                            (ManyToManyField, ManyToManyRel),
-                        ):
-                            getattr(ins, field).set(v[field])
-                        else:
-                            setattr(ins, field, v[field])
-                    except:
+                    if isinstance(
+                        ins._meta.get_field(field),
+                        (ManyToManyField, ManyToManyRel, ManyToOneRel),
+                    ):
+                        getattr(ins, field).set(v[field])
+                    else:
                         setattr(ins, field, v[field])
                     v.pop(field)
                     ins.save()
