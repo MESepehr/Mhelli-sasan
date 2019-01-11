@@ -11,7 +11,18 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.serializers import ListSerializer
 
 
-class UnixEpochDateField(serializers.DateTimeField):
+class UnixEpochDateTimeField(serializers.DateTimeField):
+    def to_representation(self, value):
+        try:
+            return int(value.timestamp())
+        except (AttributeError, TypeError):
+            return None
+
+    def to_internal_value(self, value):
+        return timezone.datetime.fromtimestamp(int(value), tz=timezone.utc)
+
+
+class UnixEpochDateField(serializers.DateField):
     def to_representation(self, value):
         try:
             return int(time.mktime(value.timetuple()))
@@ -19,7 +30,20 @@ class UnixEpochDateField(serializers.DateTimeField):
             return None
 
     def to_internal_value(self, value):
-        return timezone.datetime.fromtimestamp(int(value), tz=timezone.utc)
+        return timezone.datetime.fromtimestamp(int(value), tz=timezone.utc).\
+            date()
+
+
+class TimeField(serializers.TimeField):
+    def to_representation(self, value):
+        try:
+            return value.hour * 3600 + value.minute * 60 + value.second
+        except (AttributeError, TypeError):
+            return None
+
+    def to_internal_value(self, value):
+        return timezone.datetime.fromtimestamp(int(value), tz=timezone.utc).\
+            time()
 
 
 class DurationField(serializers.DateTimeField):
